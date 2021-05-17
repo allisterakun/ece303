@@ -139,3 +139,7 @@ cython_debug/
 
 # macOS
 .DS_Store
+
+2021/output.txt
+*.txt
+2021/scratch.py

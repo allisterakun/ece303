@@ -68,6 +68,7 @@ class myReceiver(BogoReceiver):
                     # send back "1011111" termination message and terminate
                     self.simulator.u_send(bytearray([255, 0] + [255]*5))
                     termination = True
+                    break
                 else:
                     received_seq_num_bin=received_packet[0:4]
                     received_data_len_bin=received_packet[4:8]
@@ -100,9 +101,11 @@ class myReceiver(BogoReceiver):
                         return_msg = received_seq_num_bin + struct.pack(">i",zeros)
                         self.simulator.u_send(return_msg)
                         self.logger.info("Replying ACK {}".format(received_seq_num_int))
-            except socket.timeout:
-                print("timeout")
+            except socket.timeout as timeoutException:
+                self.logger.info(str(timeoutException))
+                pass
 
+        self.logger.info("Writing to file")
         for key,value in sorted(received_packets.items()):
             sys.stdout.write(value)
 

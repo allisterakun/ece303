@@ -131,13 +131,16 @@ class mySender(BogoSender):
                 if ~unfinished:
                     self.logger.info("Finished")
                     termination=True
+                    break
 
 
         # done with all packets, time for terminator
         while True:
+            self.logger.info("Try to terminate")
             try:
                 # send "1011111" as termination message
                 self.simulator.u_send(bytearray([255, 0] + [255]*5))
+                self.logger.info("Sent TERMINATION MESSAGE")
                 ack = self.simulator.u_receive()
 
             except socket.timeout as e:
@@ -145,6 +148,8 @@ class mySender(BogoSender):
             
             # if reciever returns "1011111" -> successful termination
             if ack[0] & (~ack[1] & 0xFF) & ack[2] & ack[3] & ack[4] & ack[5] & ack[6] == 255:
+                self.logger.info("Received TERMINATION CONFIRMATION")
+                sys.exit()
                 break
 
 
