@@ -48,7 +48,7 @@ class BogoSender(Sender):
 class mySender(BogoSender):
 
     WINDOW_SIZE=2**11
-    BYTES_PER_PACKET=1000
+    BYTES_PER_PACKET=64
     def __init__(self):
         super(mySender, self).__init__()
 
@@ -128,7 +128,7 @@ class mySender(BogoSender):
                         unfinished=True
                         self.logger.info("Resent packet with sequence number {}".format(i))
                 
-                if ~unfinished:
+                if not unfinished:
                     self.logger.info("Finished")
                     termination=True
 
@@ -161,7 +161,7 @@ class mySender(BogoSender):
         input_length=len(data)
         for i in range(0,input_length/self.BYTES_PER_PACKET+1):
             lower=i*self.BYTES_PER_PACKET
-            upper=input_length if lower+self.BYTES_PER_PACKET > input_length else lower+self.BYTES_PER_PACKET
+            upper=min(input_length,lower+self.BYTES_PER_PACKET)
 
             data_packet_length_int=upper-lower
             data_packet_length_bin=struct.pack(">i",data_packet_length_int & 0xFF) 

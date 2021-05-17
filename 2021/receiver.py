@@ -58,7 +58,7 @@ class myReceiver(BogoReceiver):
 
         received_packets={}
 
-        while ~termination:
+        while not termination:
             try:
                 received_packet=self.simulator.u_receive()
 
