@@ -89,11 +89,25 @@ class mySender(BogoSender):
                 
                 while True:
                     return_packet=self.simulator.u_receive()
-                    
+
 
 
             except socket.timeout:
                 print("timeout")
+
+        # done with all packets, time for terminator
+        while True:
+            try:
+                # send "1011111" as termination message
+                self.simulator.u_send(bytearray([255, 0] + [255]*5))
+                ack = self.simulator.u_receive()
+
+            except socket.timeout as e:
+                self.logger.info(str(e))
+            
+            # if reciever returns "1011111" -> successful termination
+            if ack[0] & (~ack[1] & 0xFF) & ack[2] & ack[3] & ack[4] & ack[5] & ack[6] == 255:
+                break
 
 
 
