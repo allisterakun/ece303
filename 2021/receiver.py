@@ -81,7 +81,7 @@ class myReceiver(BogoReceiver):
 
                     received_seq_num_bin_str=bin(received_seq_num_int)[2:].zfill(32)
 
-                    checksum_bin_str=bin(self.checksum(received_seq_num_bin_str,received_data))
+                    checksum_bin_str=format(self.checksum(received_seq_num_bin_str,received_data),'b').zfill(32)
                     checksum_bin=bytearray(int(checksum_bin_str[i:i+8],2) for i in range(0,32,8))
 
                     # compare received checksum vs. checksum calculated from received packet
@@ -117,6 +117,7 @@ class myReceiver(BogoReceiver):
     def checksum(self,seq_num_bin_str,data_bin):
         filled_data = string.join([string.zfill(n, 8) for n in map(lambda s: s[2:], map(bin, data_bin))], '')
         checksum = zlib.adler32(seq_num_bin_str + filled_data) & 0xffffffff
+        sys.stdout.write(checksum)
         return checksum
 
 if __name__ == "__main__":
