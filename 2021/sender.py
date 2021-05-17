@@ -48,7 +48,7 @@ class BogoSender(Sender):
 class mySender(BogoSender):
 
     WINDOW_SIZE=2**11
-    BYTES_PER_PACKET=64
+    BYTES_PER_PACKET=1000
     def __init__(self):
         super(mySender, self).__init__()
 
@@ -64,7 +64,7 @@ class mySender(BogoSender):
 
         termination=False
 
-        while ~termination:
+        while not termination:
             try:
                 # upper=lower+window_size if lower+window_size < total_packets else total_packets
                 upper=min(lower+window_size,total_packets)
@@ -84,9 +84,9 @@ class mySender(BogoSender):
 
                         self.simulator.u_send(datagram)
                         tuple_array[i]["sent"]=True
-                        self.logger.info("Sent packet with sequence number {}".format(i))
+                        self.logger.info("Sent packet with sequence number {} out of {} packets".format(i, total_packets))
                 
-                while True:
+                while not termination:
                     return_packet=self.simulator.u_receive()
 
                     returned_seq_num_bin=return_packet[0:4]
