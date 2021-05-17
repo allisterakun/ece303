@@ -47,10 +47,13 @@ class BogoSender(Sender):
 
 class mySender(BogoSender):
 
+    def __init__(self,timeout=0.05):
+        super(mySender, self).__init__()
+        self.simulator.sndr_setup(timeout)
+        self.simulator.rcvr_setup(timeout)
+
     WINDOW_SIZE=2**11
     BYTES_PER_PACKET=64
-    def __init__(self):
-        super(mySender, self).__init__()
 
     def send(self, data):
         self.logger.info("Sending on port: {} and waiting for ACK on port: {}".format(self.outbound_port, self.inbound_port))
@@ -75,7 +78,7 @@ class mySender(BogoSender):
                 lower_seq_num_int = struct.unpack(">i",lower_seq_num_bin)[0]
                 upper_seq_num_int = struct.unpack(">i",upper_seq_num_bin)[0]
 
-                for i in range(lower_seq_num_int,upper_seq_num_int):
+                for i in range(lower_seq_num_int,upper_seq_num_int+1):
                     if tuple_array[i]["sent"] == False:
                         datagram = tuple_array[i]["sequence_number"] + \
                                    tuple_array[i]["data_packet_length"] + \
@@ -97,13 +100,9 @@ class mySender(BogoSender):
 
                     
 
-                    if  returned_seq_num_int>=lower and returned_seq_num_int<=upper \
-                        and success[returned_seq_num_int] == False \
-                        and (returned_ack_int==1111 or \
-                             returned_ack_int==1110 or \
-                             returned_ack_int==1101 or \
-                             returned_ack_int==1011 or \
-                             returned_ack_int==111):
+                    if  (returned_ack_int==1111 or returned_ack_int==1110 or returned_ack_int==1101 or returned_ack_int==1011 or returned_ack_int==0111) and returned_seq_num_int>=lower and returned_seq_num_int<=upper and success[returned_seq_num_int]==False:
+                    
+                        tuple_array[returned_seq_num_int]["ack"]=True
                         success[returned_seq_num_int]=True
                         self.logger.info("Received ACK for packet with sequence number {}".format(returned_seq_num_int))
                         if returned_seq_num_int==lower:
@@ -150,6 +149,8 @@ class mySender(BogoSender):
                 self.logger.info("Received TERMINATION CONFIRMATION")
                 sys.exit()
                 break
+                
+        sys.exit(0)
 
 
 
@@ -170,10 +171,10 @@ class mySender(BogoSender):
 
             sequence_num_int=i
             sequence_num_bin_str="{0:b}".format(sequence_num_int).zfill(32)
-            sequence_num_bin=bytearray(int(sequence_num_bin_str[i:i+8],2) for i in range(0,32,8))
+            sequence_num_bin=bytearray(int(sequence_num_bin_str[j:j+8],2) for j in range(0,32,8))
 
             checksum_bin_str=format(self.checksum(sequence_num_bin_str,data_packet_content_bin),'b').zfill(32)
-            checksum_bin=bytearray(int(checksum_bin_str[i:i+8],2) for i in range(0,32,8)) 
+            checksum_bin=bytearray(int(checksum_bin_str[j:j+8],2) for j in range(0,32,8)) 
 
             tuple_array.append({
                 "sequence_number":      sequence_num_bin,

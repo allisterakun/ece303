@@ -47,8 +47,10 @@ class BogoReceiver(Receiver):
 
 class myReceiver(BogoReceiver):
 
-    def __init__(self):
+    def __init__(self,timeout=0.05):
         super(myReceiver,self).__init__()
+        self.simulator.sndr_setup(timeout)
+        self.simulator.rcvr_setup(timeout)
 
     def receive(self):
         self.logger.info("Receiving on port: {} and replying with ACK on port: {}".format(self.inbound_port, self.outbound_port))
@@ -68,39 +70,39 @@ class myReceiver(BogoReceiver):
                     # send back "1011111" termination message and terminate
                     self.simulator.u_send(bytearray([255, 0] + [255]*5))
                     termination = True
-                    break
+                    
+                
+                received_seq_num_bin=received_packet[0:4]
+                received_data_len_bin=received_packet[4:8]
+                received_checksum_bin=received_packet[8:12]
+                received_data=received_packet[12:]
+
+                received_seq_num_int=struct.unpack(">i",received_seq_num_bin)[0]
+
+                self.logger.info("RECEIVED: {}".format(received_seq_num_int))
+
+                received_seq_num_bin_str=bin(received_seq_num_int)[2:].zfill(32)
+
+                checksum_bin_str=format(self.checksum(received_seq_num_bin_str,received_data),'b').zfill(32)
+                checksum_bin=bytearray(int(checksum_bin_str[i:i+8],2) for i in range(0,32,8))
+
+                # compare received checksum vs. checksum calculated from received packet
+                if received_checksum_bin==checksum_bin:
+                    self.logger.info("UNCORRUPTED")
+                    received_packets[received_seq_num_int]=received_data[:struct.unpack(">i",received_data_len_bin)[0]]
+
+                    ones = 1111
+                    return_msg = received_seq_num_bin + struct.pack(">i",ones)
+                    self.simulator.u_send(return_msg)
+                    self.logger.info("Replying ACK {}".format(received_seq_num_int))
+
                 else:
-                    received_seq_num_bin=received_packet[0:4]
-                    received_data_len_bin=received_packet[4:8]
-                    received_checksum_bin=received_packet[8:12]
-                    received_data=received_packet[12:]
+                    self.logger.info("CORRUPTED")
 
-                    received_seq_num_int=struct.unpack(">i",received_seq_num_bin)[0]
-
-                    self.logger.info("RECEIVED: {}".format(received_seq_num_int))
-
-                    received_seq_num_bin_str=bin(received_seq_num_int)[2:].zfill(32)
-
-                    checksum_bin_str=format(self.checksum(received_seq_num_bin_str,received_data),'b').zfill(32)
-                    checksum_bin=bytearray(int(checksum_bin_str[i:i+8],2) for i in range(0,32,8))
-
-                    # compare received checksum vs. checksum calculated from received packet
-                    if received_checksum_bin==checksum_bin:
-                        self.logger.info("UNCORRUPTED")
-                        received_packets[received_seq_num_int]=received_data[:struct.unpack(">i",received_data_len_bin)[0]]
-
-                        ones = 1111
-                        return_msg = received_seq_num_bin + struct.pack(">i",ones)
-                        self.simulator.u_send(return_msg)
-                        self.logger.info("Replying ACK {}".format(received_seq_num_int))
-
-                    else:
-                        self.logger.info("CORRUPTED")
-
-                        zeros = 0000
-                        return_msg = received_seq_num_bin + struct.pack(">i",zeros)
-                        self.simulator.u_send(return_msg)
-                        self.logger.info("Replying ACK {}".format(received_seq_num_int))
+                    zeros = 0000
+                    return_msg = received_seq_num_bin + struct.pack(">i",zeros)
+                    self.simulator.u_send(return_msg)
+                    self.logger.info("Replying ACK {}".format(received_seq_num_int))
             except socket.timeout as timeoutException:
                 self.logger.info(str(timeoutException))
                 pass
