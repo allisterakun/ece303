@@ -100,7 +100,7 @@ class mySender(BogoSender):
 
                     
 
-                    if  (returned_ack_int==1111 or returned_ack_int==1110 or returned_ack_int==1101 or returned_ack_int==1011 or returned_ack_int==0111) and returned_seq_num_int>=lower and returned_seq_num_int<=upper and success[returned_seq_num_int]==False:
+                    if  (returned_ack_int==1111 or returned_ack_int==1110 or returned_ack_int==1101 or returned_ack_int==1011 or returned_ack_int==111) and returned_seq_num_int>=lower and returned_seq_num_int<=upper and success[returned_seq_num_int]==False:
                     
                         tuple_array[returned_seq_num_int]["ack"]=True
                         success[returned_seq_num_int]=True
