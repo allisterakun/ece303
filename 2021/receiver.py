@@ -53,10 +53,19 @@ class myReceiver(BogoReceiver):
     def receive(self):
         self.logger.info("Receiving on port: {} and replying with ACK on port: {}".format(self.inbound_port, self.outbound_port))
 
-        lower=0
+        expected=0
         termination=False
 
         received_packets={}
+
+        buffed = False
+        ack_seq_num_bin_str="{0:b}".format(0).zfill(32)
+        ack_seq_num_bin=bytearray(int(ack_seq_num_bin_str[i:i+8],2) for i in range(0,32,8))
+        ones = 1111
+        lateBuffedACK = ack_seq_num_bin + struct.pack(">i",ones)
+        gapDetected = False
+        lostPacket = []
+        subtracker = []
 
         while not termination:
             try:
@@ -90,18 +99,78 @@ class myReceiver(BogoReceiver):
                         received_packets[received_seq_num_int]=received_data[:struct.unpack(">i",received_data_len_bin)[0]]
 
                         ones = 1111
-                        return_msg = received_seq_num_bin + struct.pack(">i",ones)
-                        self.simulator.u_send(return_msg)
-                        self.logger.info("Replying ACK {}".format(received_seq_num_int))
+
+                        ack_seq_num_bin_str="{0:b}".format(received_seq_num_int+1).zfill(32)
+                        ack_seq_num_bin=bytearray(int(ack_seq_num_bin_str[i:i+8],2) for i in range(0,32,8))
+                        return_msg = ack_seq_num_bin + struct.pack(">i",ones)
+
+                        if gapDetected and (received_seq_num_int != expected):
+                            ack_seq_num_bin_str="{0:b}".format(expected).zfill(32)
+                            ack_seq_num_bin=bytearray(int(ack_seq_num_bin_str[i:i+8],2) for i in range(0,32,8))
+                            return_msg = ack_seq_num_bin + struct.pack(">i",ones)
+                            self.simulator.u_send(return_msg)
+                            self.logger.info("gapDetected Replying ACK {}".format(struct.unpack(">i",lateBuffedACK[0:4])[0]))
+                            if received_seq_num_int == subtracker[len(subtracker)-1]:
+                                subtracker[len(lostPacket)-1] = received_seq_num_int + 1
+                            else:
+                                subtracker.append(received_seq_num_int+1)
+                                lostPacket.append(subtracker[len(lostPacket)-1])
+                        elif gapDetected:
+                            # gaps are filled
+                            self.logger.info("lost packet" + str(lostPacket))
+                            lostPacket.remove(expected)
+                            if len(lostPacket) == 0:
+                                expected = subtracker[0]
+                                gapDetected = False
+                            else:
+                                # next expected lost value
+                                expected = lostPacket[0]
+
+                            ack_seq_num_bin_str="{0:b}".format(expected).zfill(32)
+                            ack_seq_num_bin=bytearray(int(ack_seq_num_bin_str[i:i+8],2) for i in range(0,32,8))
+                            return_msg = ack_seq_num_bin + struct.pack(">i",ones)
+                            self.simulator.u_send(return_msg)
+                        elif received_seq_num_int == expected and (not buffed):
+                            buffed = True
+                            lateBuffedACK = return_msg
+                            expected = expected +1
+                            pass
+                        elif received_seq_num_int == expected:
+                            self.simulator.u_send(return_msg)
+                            buffed = False
+                            lateBuffedACK = return_msg
+                            expected = expected + 1
+                            self.logger.info(" expected and buffed Replying ACK {}".format(received_seq_num_int+1))
+                        elif received_seq_num_int > expected:
+                            # There is out of order detected
+                            self.simulator.u_send(lateBuffedACK)
+                            self.simulator.u_send(lateBuffedACK)
+                            self.logger.info(" gap detected Replying ACK expect" + str(expected))
+                            self.logger.info("Lost data")
+                            gapDetected = True
+                            lostPacket.append(expected)
+                            subtracker.append(received_seq_num_int+1)
+                            self.logger.info("add to lost packet" + str(lostPacket))
 
                     else:
                         self.logger.info("CORRUPTED")
 
                         zeros = 0000
-                        return_msg = received_seq_num_bin + struct.pack(">i",zeros)
-                        self.simulator.u_send(return_msg)
-                        self.logger.info("Replying ACK {}".format(received_seq_num_int))
+                        if buffed:
+                            self.simulator.u_send(lateBuffedACK)
+                            self.simulator.u_send(lateBuffedACK)
+                            self.logger.info("Replying ACK {}".format(expected))
+                        if len(lostPacket) >= 1:
+                            lostPacket.append(subtracker[len(lostPacket)-1])
+                            subtracker.append(subtracker[len(subtracker)-1])
+                        else:
+                            lostPacket.append(expected)
+                            subtracker.append(expected)
+                        gapDetected = True
             except socket.timeout as timeoutException:
+                if buffed == True:
+                    self.simulator.u_send(lateBuffedACK)
+                    self.logger.info("Replying ACK {}".format(expected))
                 self.logger.info(str(timeoutException))
                 pass
 

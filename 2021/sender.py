@@ -57,6 +57,9 @@ class mySender(BogoSender):
 
         lower=0
 
+        dupACk = 0
+        sendBase = 0
+
         tuple_array,success = self.prepare_data(data)
         total_packets=len(tuple_array)
 
@@ -95,7 +98,18 @@ class mySender(BogoSender):
                     returned_seq_num_int=struct.unpack(">i",returned_seq_num_bin)[0]
                     returned_ack_int=struct.unpack(">i",returned_ack_bin)[0]
 
-                    
+                    if returned_seq_num_int == 0 \
+                        and (returned_ack_int==1111 or \
+                             returned_ack_int==1110 or \
+                             returned_ack_int==1101 or \
+                             returned_ack_int==1011 or \
+                             returned_ack_int==111):
+                        datagram = tuple_array[0]["sequence_number"] + \
+                                   tuple_array[0]["data_packet_length"] + \
+                                   tuple_array[0]["checksum"] + \
+                                   tuple_array[0]["data"]
+                        self.simulator.u_send(datagram)
+                        self.logger.info("Fast retransmit packet " + str(0));
 
                     if  returned_seq_num_int>=lower and returned_seq_num_int<=upper \
                         and success[returned_seq_num_int] == False \
@@ -104,16 +118,33 @@ class mySender(BogoSender):
                              returned_ack_int==1101 or \
                              returned_ack_int==1011 or \
                              returned_ack_int==111):
-                        success[returned_seq_num_int]=True
+                        success[returned_seq_num_int-1]=True
+                        for i in range(sendBase, returned_seq_num_int-1):
+                            success[i] = True
                         self.logger.info("Received ACK for packet with sequence number {}".format(returned_seq_num_int))
-                        if returned_seq_num_int==lower:
+                        if returned_seq_num_int > sendBase:
+                            sendBase = returned_seq_num_int
+                        else: 
+                            dupACk= dupACk + 1
+
+                            if dupACk >= 3:
+                                # fast retransmit
+                                datagram = tuple_array[sendBase]["sequence_number"] + \
+                                   tuple_array[sendBase]["data_packet_length"] + \
+                                   tuple_array[sendBase]["checksum"] + \
+                                   tuple_array[sendBase]["data"]
+                                self.simulator.u_send(datagram)
+                                self.logger.info("Fast retransmit packet " + str(sendBase));
+                        
+                        if returned_seq_num_int == lower:
+                            self.logger.info("update lower");
                             break
 
                     # find the next unsuccessful packet and update lower
-                for i in range(lower,min(upper+1,total_packets-1)):
-                    if not success[i]:
-                        lower = i
-                        break
+                    for i in range(lower,min(upper+1,total_packets-1)):
+                        if not success[i]:
+                            lower = i
+                            break
                     
             except socket.timeout as timeoutException:
                 self.logger.info(str(timeoutException))
