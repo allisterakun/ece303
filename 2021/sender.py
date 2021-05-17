@@ -110,16 +110,16 @@ class mySender(BogoSender):
                             break
 
                     # find the next unsuccessful packet and update lower
-                    for i in range(lower,min(upper+1,total_packets-1)):
-                        if not success[i]:
-                            lower = i
-                            break
+                for i in range(lower,min(upper+1,total_packets-1)):
+                    if not success[i]:
+                        lower = i
+                        break
                     
             except socket.timeout as timeoutException:
                 self.logger.info(str(timeoutException))
                 unfinished=False
                 for i in range(lower_seq_num_int,upper_seq_num_int+1):
-                    if ~success[i]:
+                    if not success[i]:
                         datagram = tuple_array[i]["sequence_number"] + \
                                    tuple_array[i]["data_packet_length"] + \
                                    tuple_array[i]["checksum"] + \
@@ -131,7 +131,6 @@ class mySender(BogoSender):
                 if ~unfinished:
                     self.logger.info("Finished")
                     termination=True
-                    break
 
 
         # done with all packets, time for terminator
@@ -156,6 +155,7 @@ class mySender(BogoSender):
 
 
     def prepare_data(self,data):
+        self.logger.info("Preparing data")
         tuple_array=[]
         success={}
         input_length=len(data)
@@ -183,6 +183,7 @@ class mySender(BogoSender):
                 "sent":                 False})
             success[i] = False
         
+        self.logger.info("Done preparing data")
         return tuple_array,success
 
     def checksum(self,seq_num_bin_str,data_bin):
