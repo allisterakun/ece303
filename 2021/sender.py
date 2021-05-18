@@ -201,10 +201,10 @@ class mySender(BogoSender):
 
             sequence_num_int=i
             sequence_num_bin_str="{0:b}".format(sequence_num_int).zfill(32)
-            sequence_num_bin=bytearray(int(sequence_num_bin_str[i:i+8],2) for i in range(0,32,8))
+            sequence_num_bin=bytearray(int(sequence_num_bin_str[j:j+8],2) for j in range(0,32,8))
 
             checksum_bin_str=format(self.checksum(sequence_num_bin_str,data_packet_content_bin),'b').zfill(32)
-            checksum_bin=bytearray(int(checksum_bin_str[i:i+8],2) for i in range(0,32,8)) 
+            checksum_bin=bytearray(int(checksum_bin_str[j:j+8],2) for j in range(0,32,8)) 
 
             tuple_array.append({
                 "sequence_number":      sequence_num_bin,
