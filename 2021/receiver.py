@@ -70,6 +70,7 @@ class myReceiver(BogoReceiver):
                     # send back "1011111" termination message and terminate
                     self.simulator.u_send(bytearray([255, 0] + [255]*5))
                     termination = True
+                    break
                     
                 
                 received_seq_num_bin=received_packet[0:4]
@@ -86,10 +87,14 @@ class myReceiver(BogoReceiver):
                 checksum_bin_str=format(self.checksum(received_seq_num_bin_str,received_data),'b').zfill(32)
                 checksum_bin=bytearray(int(checksum_bin_str[i:i+8],2) for i in range(0,32,8))
 
+                # received_data_len_int=struct.unpack(">i",received_data_len_bin)[0]
+                # self.logger.info("Length: {}".format(received_data_len_int))
+
                 # compare received checksum vs. checksum calculated from received packet
                 if received_checksum_bin==checksum_bin:
                     self.logger.info("UNCORRUPTED")
                     received_packets[received_seq_num_int]=received_data[:struct.unpack(">i",received_data_len_bin)[0]]
+                    # sys.stderr.write(received_data_len_int)
 
                     ones = 1111
                     return_msg = received_seq_num_bin + struct.pack(">i",ones)

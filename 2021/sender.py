@@ -53,7 +53,7 @@ class mySender(BogoSender):
         self.simulator.rcvr_setup(timeout)
 
     WINDOW_SIZE=2**11
-    BYTES_PER_PACKET=64
+    BYTES_PER_PACKET=1012
 
     def send(self, data):
         self.logger.info("Sending on port: {} and waiting for ACK on port: {}".format(self.outbound_port, self.inbound_port))
@@ -157,6 +157,7 @@ class mySender(BogoSender):
 
     def prepare_data(self,data):
         self.logger.info("Preparing data")
+        print("Preparing data")
         tuple_array=[]
         success={}
         input_length=len(data)
@@ -165,7 +166,7 @@ class mySender(BogoSender):
             upper=min(input_length,lower+self.BYTES_PER_PACKET)
 
             data_packet_length_int=upper-lower
-            data_packet_length_bin=struct.pack(">i",data_packet_length_int & 0xFF) 
+            data_packet_length_bin=struct.pack(">i",data_packet_length_int & 0x3FF) 
 
             data_packet_content_bin=data[lower:upper] + bytearray([0]*(self.BYTES_PER_PACKET + lower - upper))
 
@@ -185,6 +186,7 @@ class mySender(BogoSender):
             success[i] = False
         
         self.logger.info("Done preparing data")
+        print("Done preparing data")
         return tuple_array,success
 
     def checksum(self,seq_num_bin_str,data_bin):
