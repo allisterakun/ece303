@@ -47,7 +47,7 @@ class BogoSender(Sender):
 
 class mySender(BogoSender):
 
-    WINDOW_SIZE=2**11
+    WINDOW_SIZE=2**10
     BYTES_PER_PACKET=64
     def __init__(self):
         super(mySender, self).__init__()
@@ -112,7 +112,7 @@ class mySender(BogoSender):
                         self.logger.info("Fast retransmit packet " + str(0));
 
                     if  returned_seq_num_int>=lower and returned_seq_num_int<=upper \
-                        and success[returned_seq_num_int] == False \
+                        and success[returned_seq_num_int-1] == False \
                         and (returned_ack_int==1111 or \
                              returned_ack_int==1110 or \
                              returned_ack_int==1101 or \
@@ -135,6 +135,7 @@ class mySender(BogoSender):
                                    tuple_array[sendBase]["data"]
                                 self.simulator.u_send(datagram)
                                 self.logger.info("Fast retransmit packet " + str(sendBase));
+                                dupACk = 0
                         
                         if returned_seq_num_int == lower:
                             self.logger.info("update lower");

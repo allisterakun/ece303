@@ -104,7 +104,7 @@ class myReceiver(BogoReceiver):
                         if gapDetected:
                             if received_seq_num_int in lostPacket:
                                 lostPacket.remove(received_seq_num_int)
-                            if received_seq_num_int == subtracker:
+                            elif received_seq_num_int == subtracker:
                                 # update subtracker for next consecutive sequence
                                 subtracker = received_seq_num_int + 1
                             elif received_seq_num_int > subtracker:
@@ -132,7 +132,6 @@ class myReceiver(BogoReceiver):
                         elif received_seq_num_int == expected and (not buffed):
                             buffed = True
                             expected = expected +1
-                            pass
                         elif received_seq_num_int == expected:
                             self.simulator.u_send(return_msg)
                             
@@ -141,6 +140,11 @@ class myReceiver(BogoReceiver):
                             
                             self.logger.info("Received and buffed Replying ACK {}".format(received_seq_num_int+1))
 
+                        elif received_seq_num_int < expected:
+                            # duplicate packet received
+                            return_msg = self.createReturn(expected)
+                            self.simulator.u_send(return_msg)
+                            self.logger.info("Reply ack for dup "+ str(expected))
                         elif received_seq_num_int > expected:
                             # There is out of order detected
                             # Imediately send two last 
@@ -176,6 +180,7 @@ class myReceiver(BogoReceiver):
                             lostPacket.append(subtracker)
                         else:
                             lostPacket.append(expected)
+                            subtracker = expected
                         
                         lostPacket = self.removeDup(lostPacket)
                         self.logger.info("Corrupted add to lost" + str(lostPacket))
